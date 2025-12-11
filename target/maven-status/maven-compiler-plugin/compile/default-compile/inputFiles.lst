@@ -1,0 +1,17 @@
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/BasePage.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/FlightManagementPage.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/FlightStatusPage.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/HomePage.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/BaseComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/layout/AirportSelectorComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/layout/DatePickerComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/layout/DestinationSelectorComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/layout/PassengerSelectorComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/CitiesBlockComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/FlightSearchTabComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/FooterComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/NavbarComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/tab/CheckInTabComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/tab/FlightManagementTabComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/tab/FlightStatusTabComponent.java
+/Users/burak/Documents/Misc/ajet-selenium/src/main/java/com/ajet/pages/components/ui/tab/SearchFlightTabComponent.java

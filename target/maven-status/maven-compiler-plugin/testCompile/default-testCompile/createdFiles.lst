@@ -1,0 +1,6 @@
+com/ajet/tests/BaseTest.class
+com/ajet/tests/OnlineCheckinTest.class
+com/ajet/tests/FlightStatusTest.class
+com/ajet/tests/FlightSearchTest.class
+com/ajet/tests/FlightManagementTest.class
+com/ajet/tests/DatePickerAnalysisTest.class
