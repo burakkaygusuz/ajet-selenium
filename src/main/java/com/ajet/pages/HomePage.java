@@ -14,6 +14,7 @@ import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
 import com.ajet.pages.components.ui.CitiesBlockComponent;
+import com.ajet.pages.components.ui.FAQBlockComponent;
 import com.ajet.pages.components.ui.FlightSearchTabComponent;
 import com.ajet.pages.components.ui.FooterComponent;
 import com.ajet.pages.components.ui.HomePageSliderComponent;
@@ -26,6 +27,7 @@ public class HomePage extends BasePage {
     private final FooterComponent footer;
     private final CitiesBlockComponent citiesBlock;
     private final HomePageSliderComponent homePageSlider;
+    private final FAQBlockComponent faqBlock;
     private static final String URL = "https://ajet.com/en";
 
     public HomePage(WebDriver driver) {
@@ -35,6 +37,7 @@ public class HomePage extends BasePage {
         this.footer = new FooterComponent(driver);
         this.citiesBlock = new CitiesBlockComponent(driver);
         this.homePageSlider = new HomePageSliderComponent(driver);
+        this.faqBlock = new FAQBlockComponent(driver);
     }
 
     @FindBy(id = "pnl-cookie")
@@ -121,5 +124,9 @@ public class HomePage extends BasePage {
 
     public HomePageSliderComponent getHomePageSlider() {
         return homePageSlider;
+    }
+
+    public FAQBlockComponent getFAQBlock() {
+        return faqBlock;
     }
 }
