@@ -91,6 +91,7 @@ public class FAQBlockComponent extends BaseComponent {
     }
 
     public List<String> getAllCategories() {
+        // Use JS Click to avoid interception
         ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", categoryDropdownTrigger);
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".p-dropdown-panel .p-dropdown-items")));
         
@@ -99,9 +100,84 @@ public class FAQBlockComponent extends BaseComponent {
                 .filter(text -> !text.isEmpty())
                 .collect(Collectors.toList());
 
+        // Close the dropdown using JS click as well
         ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", categoryDropdownTrigger);
         wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".p-dropdown-panel")));
         
         return categories;
+    }
+
+    /**
+     * Selects a category based on a CONSTANT_CASE key (e.g. RESERVATION_AND_TICKETING).
+     * It fuzzy matches the key words with available options.
+     */
+    public void selectCategoryByKey(String key) {
+        String normalizedKey = key.replace("_", " ").toLowerCase();
+        
+        // Open dropdown to get options (using JS as per fix)
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", categoryDropdownTrigger);
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".p-dropdown-panel .p-dropdown-items")));
+        
+        WebElement bestMatch = null;
+        int maxMatches = 0;
+
+        for (WebElement option : categoryOptions) {
+            String optionText = option.getText().toLowerCase();
+            int matches = 0;
+            for (String word : normalizedKey.split(" ")) {
+                if (optionText.contains(word)) {
+                    matches++;
+                }
+            }
+            if (matches > maxMatches) {
+                maxMatches = matches;
+                bestMatch = option;
+            }
+        }
+
+        if (bestMatch != null) {
+            bestMatch.click();
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".p-dropdown-panel")));
+        } else {
+            // Close if no match found
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", categoryDropdownTrigger);
+            throw new RuntimeException("No matching category found for key: " + key);
+        }
+    }
+
+    /**
+     * Expands a question based on a CONSTANT_CASE key (e.g. WHERE_CAN_I_BUY).
+     * It fuzzy matches the key words with available questions.
+     */
+    public void expandQuestionByKey(String key) {
+        String normalizedKey = key.replace("_", " ").toLowerCase();
+        
+        WebElement bestMatchTab = null;
+        int maxMatches = 0;
+
+        for (WebElement tab : questionTabs) {
+            String questionText = tab.findElement(By.cssSelector(".p-accordion-header-text")).getText().toLowerCase();
+            int matches = 0;
+            // Filter out common words to improve accuracy if needed, but basic split is a good start
+            for (String word : normalizedKey.split(" ")) {
+                if (questionText.contains(word)) {
+                    matches++;
+                }
+            }
+            if (matches > maxMatches) {
+                maxMatches = matches;
+                bestMatchTab = tab;
+            }
+        }
+
+        if (bestMatchTab != null) {
+            WebElement header = bestMatchTab.findElement(By.cssSelector(".p-accordion-header"));
+            if (!bestMatchTab.getAttribute("class").contains("p-accordion-tab-active")) {
+                header.click();
+                wait.until(ExpectedConditions.attributeContains(bestMatchTab, "class", "p-accordion-tab-active"));
+            }
+        } else {
+            throw new RuntimeException("No matching question found for key: " + key);
+        }
     }
 }
