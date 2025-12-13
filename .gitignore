@@ -1,0 +1,19 @@
+# Maven
+/target
+
+# IDE
+.idea
+.vscode
+
+# JUnit
+surefire-reports
+
+# Browser
+chromedriver
+geckodriver
+
+# Logs
+logs
+
+# System
+.DS_Store
