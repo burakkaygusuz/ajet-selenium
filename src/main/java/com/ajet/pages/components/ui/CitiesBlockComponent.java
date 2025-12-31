@@ -4,6 +4,7 @@ import com.ajet.pages.components.BaseComponent;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -14,63 +15,98 @@ import java.util.stream.Collectors;
 
 public class CitiesBlockComponent extends BaseComponent {
 
-    @FindBy(xpath = "//h2[contains(text(), 'All Our Flight Arrivals')]/parent::div")
+    @FindBy(css = ".cities-block")
     private WebElement citiesBlockRoot;
 
-    @FindBy(xpath = "//h2[contains(text(), 'All Our Flight Arrivals')]/following-sibling::div[1]//button[contains(@class, 'tab-button')]")
+    @FindBy(css = ".cities-block .region-btn")
     private List<WebElement> tabs;
 
-    @FindBy(xpath = "//h2[contains(text(), 'All Our Flight Arrivals')]/following-sibling::div[2]//div[contains(@class, 'country-column')]")
+    @FindBy(css = ".cities-block .country-list")
     private List<WebElement> countryColumns;
+
+    @FindBy(css = "button.btn-show-flights")
+    private List<WebElement> showFlightsButtons;
 
     public CitiesBlockComponent(WebDriver driver) {
         super(driver);
     }
 
     public void selectTab(String tabName) {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center', inline: 'center'});", citiesBlockRoot);
-        
-        // Wait for at least one tab button to be present before checking visibility of all
-        wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("div.cities-block .tab-button")));
+        ensureVisible();
+
         wait.until(ExpectedConditions.visibilityOfAllElements(tabs));
+
         WebElement tab = tabs.stream()
-                .filter(t -> t.getText().equalsIgnoreCase(tabName))
+                .filter(t -> t.getText().trim().equalsIgnoreCase(tabName))
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("Tab not found: " + tabName));
-        
+
         wait.until(ExpectedConditions.elementToBeClickable(tab));
         tab.click();
+
         wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
     }
 
     public List<String> getCountries() {
-        wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns)); // Ensure elements are visible after tab click
+        wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
         return countryColumns.stream()
-                .map(col -> col.findElement(By.cssSelector("h3")).getText().trim())
+                .map(col -> col.findElement(By.cssSelector(".country-label")).getText().trim())
                 .collect(Collectors.toList());
     }
 
     public List<String> getCitiesInCountry(String countryName) {
         wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
         WebElement countryColumn = countryColumns.stream()
-                .filter(col -> col.findElement(By.cssSelector("h3")).getText().equalsIgnoreCase(countryName))
+                .filter(col -> col.findElement(By.cssSelector(".country-label")).getText().trim().equalsIgnoreCase(countryName))
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("Country not found: " + countryName));
-        
-        return countryColumn.findElements(By.cssSelector("ul.city-list li a")).stream()
+
+        return countryColumn.findElements(By.tagName("a")).stream()
                 .map(WebElement::getText)
+                .map(String::trim)
                 .collect(Collectors.toList());
     }
 
     public void clickCity(String cityName) {
         wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
         WebElement cityLink = countryColumns.stream()
-                .flatMap(col -> col.findElements(By.cssSelector("ul.city-list li a")).stream())
-                .filter(link -> link.getText().equalsIgnoreCase(cityName))
+                .flatMap(col -> col.findElements(By.tagName("a")).stream())
+                .filter(link -> link.getText().trim().equalsIgnoreCase(cityName))
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("City not found: " + cityName));
 
+        scrollTo(cityLink);
         wait.until(ExpectedConditions.elementToBeClickable(cityLink));
         cityLink.click();
+    }
+
+    private void ensureVisible() {
+        try {
+            // First check if already in DOM and visible
+            wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
+            scrollTo(citiesBlockRoot);
+        } catch (TimeoutException | NoSuchElementException e) {
+            // Try scrolling to bottom to trigger lazy loading
+            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, document.body.scrollHeight);");
+            try {
+                wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
+                scrollTo(citiesBlockRoot);
+            } catch (TimeoutException | NoSuchElementException ex) {
+                // Check fallback button (mobile/overlay view)
+                if (!showFlightsButtons.isEmpty()) {
+                    WebElement btn = showFlightsButtons.get(0);
+                    scrollTo(btn);
+                    wait.until(ExpectedConditions.elementToBeClickable(btn));
+                    btn.click();
+                    wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
+                } else {
+                    throw new NoSuchElementException("Cities Block root not found even after scrolling.", ex);
+                }
+            }
+        }
+    }
+
+    private void scrollTo(WebElement element) {
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center', inline: 'center'});", element);
     }
 }
