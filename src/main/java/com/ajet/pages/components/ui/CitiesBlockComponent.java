@@ -1,5 +1,8 @@
 package com.ajet.pages.components.ui;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
@@ -9,15 +12,9 @@ import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.ajet.pages.components.BaseComponent;
 
 public class CitiesBlockComponent extends BaseComponent {
-
-    @FindBy(css = ".cities-block")
-    private WebElement citiesBlockRoot;
 
     @FindBy(css = ".cities-block .region-btn")
     private List<WebElement> tabs;
@@ -25,28 +22,31 @@ public class CitiesBlockComponent extends BaseComponent {
     @FindBy(css = ".cities-block .country-list, .cities-block .city-list")
     private List<WebElement> destinationLists;
 
+    @FindBy(xpath = "//h2[contains(., 'Our Flight Arrivals')]")
+    private WebElement arrivalsHeading;
+
     public CitiesBlockComponent(WebDriver driver) {
         super(driver);
     }
 
     public void selectTab(String tabName) {
-        // Robust Lazy Loading: Scroll until citiesBlockRoot is present in DOM
+        // Robust Lazy Loading: Scroll until arrivalsHeading is present and visible
         wait.until(d -> {
             try {
-                if (citiesBlockRoot.isDisplayed()) return true;
+                if (arrivalsHeading.isDisplayed()) return true;
             } catch (Exception e) {
                 ((JavascriptExecutor) driver).executeScript("window.scrollBy(0, 400);");
             }
             return false;
         });
 
-        // Precision scroll using Actions API once present
+        // Precision scroll to the heading using Actions API
         new Actions(driver)
-                .scrollToElement(citiesBlockRoot)
+                .scrollToElement(arrivalsHeading)
                 .perform();
         
-        // Ensure it's centered to avoid overlap with sticky headers
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", citiesBlockRoot);
+        // Center the heading to avoid overlap with headers
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", arrivalsHeading);
 
         wait.until(ExpectedConditions.visibilityOfAllElements(tabs));
 
