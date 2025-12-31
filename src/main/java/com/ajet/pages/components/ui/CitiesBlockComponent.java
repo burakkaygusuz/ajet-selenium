@@ -1,19 +1,18 @@
 package com.ajet.pages.components.ui;
 
-import com.ajet.pages.components.BaseComponent;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import com.ajet.pages.components.BaseComponent;
 
 public class CitiesBlockComponent extends BaseComponent {
 
@@ -26,16 +25,20 @@ public class CitiesBlockComponent extends BaseComponent {
     @FindBy(css = ".cities-block .country-list, .cities-block .city-list")
     private List<WebElement> destinationLists;
 
-    @FindBy(css = "button.btn-show-flights")
-    private List<WebElement> showFlightsButtons;
-
     public CitiesBlockComponent(WebDriver driver) {
         super(driver);
     }
 
     public void selectTab(String tabName) {
-        ensureVisible();
+        // Use Actions API to scroll to the component
+        new Actions(driver)
+                .scrollToElement(citiesBlockRoot)
+                .perform();
+        
+        // Ensure it's centered to avoid overlap with sticky headers
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", citiesBlockRoot);
 
+        wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
         wait.until(ExpectedConditions.visibilityOfAllElements(tabs));
 
         WebElement tab = tabs.stream()
@@ -88,49 +91,12 @@ public class CitiesBlockComponent extends BaseComponent {
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("City not found: " + cityName));
 
-        scrollTo(cityLink);
+        new Actions(driver)
+                .scrollToElement(cityLink)
+                .perform();
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", cityLink);
+        
         wait.until(ExpectedConditions.elementToBeClickable(cityLink));
         cityLink.click();
-    }
-
-    private void ensureVisible() {
-        By rootLocator = By.cssSelector(".cities-block");
-        
-        // Try finding it with incremental scrolling to trigger lazy loading
-        for (int i = 0; i < 5; i++) {
-            try {
-                // Use a short wait to see if the element appeared after scrolling
-                new WebDriverWait(driver, Duration.ofMillis(500))
-                    .until(ExpectedConditions.visibilityOfElementLocated(rootLocator));
-                scrollTo(driver.findElement(rootLocator));
-                return; // Found and visible
-            } catch (TimeoutException e) {
-                // Scroll down to trigger loading
-                ((JavascriptExecutor) driver).executeScript("window.scrollBy(0, window.innerHeight / 2);");
-            }
-        }
-
-        // If main block not visible, check for the fallback toggle button
-        showFlightsButtons.stream()
-            .filter(WebElement::isDisplayed)
-            .findFirst()
-            .ifPresentOrElse(btn -> {
-                scrollTo(btn);
-                wait.until(ExpectedConditions.elementToBeClickable(btn)).click();
-                // Final validation after clicking
-                try {
-                    wait.until(ExpectedConditions.visibilityOfElementLocated(rootLocator));
-                    scrollTo(driver.findElement(rootLocator));
-                } catch (TimeoutException e) {
-                    throw new NoSuchElementException("Cities Block (.cities-block) still not visible after clicking toggle button.", e);
-                }
-            }, () -> {
-                // No displayed button found
-                throw new NoSuchElementException("Cities Block (.cities-block) not visible after scrolling and no toggle button is displayed.");
-            });
-    }
-
-    private void scrollTo(WebElement element) {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center', inline: 'center'});", element);
     }
 }
