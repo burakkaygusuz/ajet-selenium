@@ -9,7 +9,9 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,8 +23,8 @@ public class CitiesBlockComponent extends BaseComponent {
     @FindBy(css = ".cities-block .region-btn")
     private List<WebElement> tabs;
 
-    @FindBy(css = ".cities-block .country-list")
-    private List<WebElement> countryColumns;
+    @FindBy(css = ".cities-block .country-list, .cities-block .city-list")
+    private List<WebElement> destinationLists;
 
     @FindBy(css = "button.btn-show-flights")
     private List<WebElement> showFlightsButtons;
@@ -44,33 +46,44 @@ public class CitiesBlockComponent extends BaseComponent {
         wait.until(ExpectedConditions.elementToBeClickable(tab));
         tab.click();
 
-        wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
+        // Wait for results to appear (can be country lists or city lists)
+        wait.until(ExpectedConditions.visibilityOfAllElements(destinationLists));
     }
 
     public List<String> getCountries() {
-        wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
-        return countryColumns.stream()
+        wait.until(ExpectedConditions.visibilityOfAllElements(destinationLists));
+        return destinationLists.stream()
+                .filter(el -> el.getAttribute("class").contains("country-list"))
                 .map(col -> col.findElement(By.cssSelector(".country-label")).getText().trim())
                 .collect(Collectors.toList());
     }
 
     public List<String> getCitiesInCountry(String countryName) {
-        wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
-        WebElement countryColumn = countryColumns.stream()
-                .filter(col -> col.findElement(By.cssSelector(".country-label")).getText().trim().equalsIgnoreCase(countryName))
+        wait.until(ExpectedConditions.visibilityOfAllElements(destinationLists));
+        
+        return destinationLists.stream()
+                .filter(el -> {
+                    if (el.getAttribute("class").contains("country-list")) {
+                        try {
+                            return el.findElement(By.cssSelector(".country-label")).getText().trim().equalsIgnoreCase(countryName);
+                        } catch (NoSuchElementException e) {
+                            return false;
+                        }
+                    }
+                    return false;
+                })
                 .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Country not found: " + countryName));
-
-        return countryColumn.findElements(By.tagName("a")).stream()
-                .map(WebElement::getText)
-                .map(String::trim)
-                .collect(Collectors.toList());
+                .map(col -> col.findElements(By.tagName("a")).stream()
+                        .map(WebElement::getText)
+                        .map(String::trim)
+                        .collect(Collectors.toList()))
+                .orElse(java.util.Collections.emptyList());
     }
 
     public void clickCity(String cityName) {
-        wait.until(ExpectedConditions.visibilityOfAllElements(countryColumns));
-        WebElement cityLink = countryColumns.stream()
-                .flatMap(col -> col.findElements(By.tagName("a")).stream())
+        wait.until(ExpectedConditions.visibilityOfAllElements(destinationLists));
+        WebElement cityLink = destinationLists.stream()
+                .flatMap(el -> el.findElements(By.tagName("a")).stream())
                 .filter(link -> link.getText().trim().equalsIgnoreCase(cityName))
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("City not found: " + cityName));
@@ -81,29 +94,40 @@ public class CitiesBlockComponent extends BaseComponent {
     }
 
     private void ensureVisible() {
-        try {
-            // First check if already in DOM and visible
-            wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
-            scrollTo(citiesBlockRoot);
-        } catch (TimeoutException | NoSuchElementException e) {
-            // Try scrolling to bottom to trigger lazy loading
-            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, document.body.scrollHeight);");
+        By rootLocator = By.cssSelector(".cities-block");
+        
+        // Try finding it with incremental scrolling to trigger lazy loading
+        for (int i = 0; i < 5; i++) {
             try {
-                wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
-                scrollTo(citiesBlockRoot);
-            } catch (TimeoutException | NoSuchElementException ex) {
-                // Check fallback button (mobile/overlay view)
-                if (!showFlightsButtons.isEmpty()) {
-                    WebElement btn = showFlightsButtons.get(0);
-                    scrollTo(btn);
-                    wait.until(ExpectedConditions.elementToBeClickable(btn));
-                    btn.click();
-                    wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
-                } else {
-                    throw new NoSuchElementException("Cities Block root not found even after scrolling.", ex);
-                }
+                // Use a short wait to see if the element appeared after scrolling
+                new WebDriverWait(driver, Duration.ofMillis(500))
+                    .until(ExpectedConditions.visibilityOfElementLocated(rootLocator));
+                scrollTo(driver.findElement(rootLocator));
+                return; // Found and visible
+            } catch (TimeoutException e) {
+                // Scroll down to trigger loading
+                ((JavascriptExecutor) driver).executeScript("window.scrollBy(0, window.innerHeight / 2);");
             }
         }
+
+        // If main block not visible, check for the fallback toggle button
+        showFlightsButtons.stream()
+            .filter(WebElement::isDisplayed)
+            .findFirst()
+            .ifPresentOrElse(btn -> {
+                scrollTo(btn);
+                wait.until(ExpectedConditions.elementToBeClickable(btn)).click();
+                // Final validation after clicking
+                try {
+                    wait.until(ExpectedConditions.visibilityOfElementLocated(rootLocator));
+                    scrollTo(driver.findElement(rootLocator));
+                } catch (TimeoutException e) {
+                    throw new NoSuchElementException("Cities Block (.cities-block) still not visible after clicking toggle button.", e);
+                }
+            }, () -> {
+                // No displayed button found
+                throw new NoSuchElementException("Cities Block (.cities-block) not visible after scrolling and no toggle button is displayed.");
+            });
     }
 
     private void scrollTo(WebElement element) {
