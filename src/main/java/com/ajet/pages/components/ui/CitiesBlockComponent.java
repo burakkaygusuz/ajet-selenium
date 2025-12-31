@@ -30,7 +30,17 @@ public class CitiesBlockComponent extends BaseComponent {
     }
 
     public void selectTab(String tabName) {
-        // Use Actions API to scroll to the component
+        // Robust Lazy Loading: Scroll until citiesBlockRoot is present in DOM
+        wait.until(d -> {
+            try {
+                if (citiesBlockRoot.isDisplayed()) return true;
+            } catch (Exception e) {
+                ((JavascriptExecutor) driver).executeScript("window.scrollBy(0, 400);");
+            }
+            return false;
+        });
+
+        // Precision scroll using Actions API once present
         new Actions(driver)
                 .scrollToElement(citiesBlockRoot)
                 .perform();
@@ -38,7 +48,6 @@ public class CitiesBlockComponent extends BaseComponent {
         // Ensure it's centered to avoid overlap with sticky headers
         ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", citiesBlockRoot);
 
-        wait.until(ExpectedConditions.visibilityOf(citiesBlockRoot));
         wait.until(ExpectedConditions.visibilityOfAllElements(tabs));
 
         WebElement tab = tabs.stream()
